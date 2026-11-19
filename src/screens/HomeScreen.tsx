@@ -9,6 +9,7 @@ import { useBack } from '../nav/back';
 import { play } from '../player/launcher';
 import { BackdropLayer } from '../components/Backdrop';
 import { requestFocus } from '../components/focus';
+import { TitleOrLogo } from '../components/TitleOrLogo';
 import { TopNav } from '../components/TopNav';
 import {
   CenterMessage, LandscapeCard, MetaRow, NovaButton, NovaLoader, PosterCard, SectionTitle,
@@ -442,41 +443,6 @@ function HeroInfo({ item }: { item: Item }) {
       <View style={{ height: dp(8) }} />
       <Text numberOfLines={2} style={[NovaType.Body, { color: P.textDim }]}>{item.overview}</Text>
     </Animated.View>
-  );
-}
-
-/** The title's logo picture (left-aligned, kept inside the max size), or the title as text. */
-export function TitleOrLogo({ item, maxLogoH, maxLogoW, big }: { item: Item; maxLogoH: number; maxLogoW: number; big: boolean }) {
-  const P = usePalette();
-  const logo = api.logo(item);
-  const [failed, setFailed] = useState(!logo);
-  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
-  useEffect(() => {
-    setFailed(!api.logo(item));
-    setSize(null);
-  }, [item.id, item]);
-
-  if (!failed && logo) {
-    return (
-      <Image
-        source={{ uri: logo }}
-        resizeMode="contain"
-        onError={() => setFailed(true)}
-        onLoad={e => {
-          const src = (e.nativeEvent as any)?.source;
-          if (src?.width && src?.height) {
-            const s = Math.min(dp(maxLogoW) / src.width, dp(maxLogoH) / src.height);
-            setSize({ w: src.width * s, h: src.height * s });
-          }
-        }}
-        style={size ? { width: size.w, height: size.h } : { width: dp(maxLogoW), height: dp(maxLogoH), opacity: 0.001 }}
-      />
-    );
-  }
-  return (
-    <Text numberOfLines={2} style={[big ? NovaType.Display : NovaType.Title, { color: P.text }]}>
-      {isEpisode(item) ? item.seriesName ?? item.name : item.name}
-    </Text>
   );
 }
 

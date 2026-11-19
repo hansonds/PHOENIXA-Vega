@@ -22,6 +22,22 @@ const ICONS = {
   tv: require('../../assets/icons/tv.png'),
   logout: require('../../assets/icons/logout.png'),
   check: require('../../assets/icons/check.png'),
+  closed_caption: require('../../assets/icons/closed_caption.png'),
+  surround_sound: require('../../assets/icons/surround_sound.png'),
+  speed: require('../../assets/icons/speed.png'),
+  aspect_ratio: require('../../assets/icons/aspect_ratio.png'),
+  skip_next: require('../../assets/icons/skip_next.png'),
+  replay_10: require('../../assets/icons/replay_10.png'),
+  forward_10: require('../../assets/icons/forward_10.png'),
+  pause: require('../../assets/icons/pause.png'),
+  menu_book: require('../../assets/icons/menu_book.png'),
+  add: require('../../assets/icons/add.png'),
+  delete: require('../../assets/icons/delete.png'),
+  link: require('../../assets/icons/link.png'),
+  open_in_new: require('../../assets/icons/open_in_new.png'),
+  movie: require('../../assets/icons/movie.png'),
+  close: require('../../assets/icons/close.png'),
+  history: require('../../assets/icons/history.png'),
 };
 
 export type IconName = keyof typeof ICONS;

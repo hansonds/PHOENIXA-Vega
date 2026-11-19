@@ -26,6 +26,8 @@ interface Values {
   /** 1 = Phoenix Ember */
   theme: number;
   deviceId: string | null;
+  /** Reason for the last crash, shown in Settings (helps fixing it) */
+  lastCrash: string | null;
 }
 
 const defaults: Values = {
@@ -43,6 +45,7 @@ const defaults: Values = {
   videoFit: 0,
   theme: 1,
   deviceId: null,
+  lastCrash: null,
 };
 
 const KEY = 'phoenixa.prefs';
@@ -100,6 +103,8 @@ class PrefsImpl {
   get theme() { return values.theme; }
   set theme(v: number) { values.theme = v; save(); }
   get deviceId(): string { return values.deviceId ?? ''; }
+  get lastCrash() { return values.lastCrash; }
+  set lastCrash(v: string | null) { values.lastCrash = v; save(); }
 
   signOut() {
     values.userId = null;

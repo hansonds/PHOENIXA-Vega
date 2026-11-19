@@ -16,16 +16,18 @@ The same look and remote controls as [PHOENIXA for Android TV / Fire TV](https:/
 
 PHOENIXA is a native TV app for your Jellyfin server, with its own elegant dark theme. Every screen is designed around the remote, so you always know where the highlight is and how to get back. Videos play the original file directly (no server transcoding).
 
-## 🚧 Progress
+## ✨ Features
 
-| Part | Status |
-|---|---|
-| Sign in (server address, username and password, **Quick Connect**) | ✅ |
-| Top bar (Search, Home, Favorites, Search & Add, every library, Settings, profile picture, clock) | ✅ |
-| Home: featured carousel, Continue Watching, Next Up, Recently Added for each library, My Favorites | ✅ |
-| Player (direct play, audio and subtitle tracks, resume, next episode) | Next |
-| Details, seasons and episodes, actor pages, library grids, search, favorites, full settings, About | Coming |
-| Search & Add (Torvia) | Coming |
+- **Sign in** with your server address and username/password, or **Quick Connect** (no typing on the remote).
+- **Home**: featured carousel with title logos and badges, Continue Watching, Next Up, Recently Added for each library, My Favorites.
+- **Library grids** (Recently Added, A–Z, Top Rated, Release Year, Random), **Favorites** with filters, **Search**.
+- **Details**: logo, info, genres, tagline, "Ends at", Version / Audio / Subtitles pickers, seasons and episodes, Cast & Crew, actor pages with biography, More Like This, mark watched and favourite.
+- **Player**: plays the original file straight from your server (no transcoding), audio and subtitle tracks with real language names (your choice is remembered), speed, screen size, synopsis and cast, seek bar with hold-to-scrub, ±10 s, auto-play next episode, watch progress synced to your server.
+- **Search & Add** for servers with the [Torvia](https://github.com/hansonds/Torvia-Jellyfin) plugin: search, filter releases, add to TorBox, My adds.
+- **11 colour themes**, card size, streaming quality, auto-play and carousel settings, **About** page.
+
+### Audio on Vega OS
+Fire TV devices with Vega OS can't play **Dolby TrueHD**, and play **DTS** only by passing it to a soundbar or receiver that supports DTS. PHOENIXA picks another audio track of the file (for example AC3 or E-AC3) when there is one, and tells you clearly when a file has no audio track this TV can play.
 
 ## 📥 Download
 

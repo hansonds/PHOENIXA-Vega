@@ -1,5 +1,5 @@
 import React, { forwardRef, ReactNode, useEffect, useRef } from 'react';
-import { Animated, Easing, StyleProp, Text, View, ViewStyle } from 'react-native';
+import { Animated, Easing, FlatList, StyleProp, Text, View, ViewStyle } from 'react-native';
 import {
   Item, episodeLabel, isEpisode, isSeries, progress as itemProgress, qualityBadges, runtimeMinutes,
 } from '../data/models';
@@ -341,6 +341,52 @@ export function NovaLoader({ size = 56, style }: { size?: number; style?: StyleP
           borderLeftColor: 'transparent',
           transform: [{ rotate: spin }],
         }}
+      />
+    </View>
+  );
+}
+
+export function PersonCard({ person, onPress }: { person: import('../data/models').Person; onPress: () => void }) {
+  const P = usePalette();
+  return (
+    <View style={{ width: dp(120), alignItems: 'center' }}>
+      <FocusSurface onPress={onPress} style={{ width: dp(96), height: dp(96) }} radius={48} focusedScale={1.1}>
+        {() => (
+          <View style={{ flexGrow: 1, backgroundColor: P.surfaceHi, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={[NovaType.Title, { color: P.textDim }]}>{person.name.slice(0, 1)}</Text>
+            <NetImage uri={api.personImage(person)} style={fill} />
+          </View>
+        )}
+      </FocusSurface>
+      <View style={{ height: dp(10) }} />
+      <Text numberOfLines={1} style={[NovaType.Label, { color: P.text, textAlign: 'center' }]}>{person.name}</Text>
+      <Text numberOfLines={1} style={[NovaType.Label, { fontSize: sp(11), color: P.textFaint, textAlign: 'center' }]}>
+        {person.role || person.type}
+      </Text>
+    </View>
+  );
+}
+
+/** A horizontal row of cards with a section title (LazyRow + EdgeScroll on Android) */
+export function CardRow<T>({ title, data, keyOf, gap = 18, render, style }: {
+  title: string;
+  data: T[];
+  keyOf: (t: T) => string;
+  gap?: number;
+  render: (t: T, i: number) => ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
+  return (
+    <View style={style}>
+      <SectionTitle text={title} style={{ marginLeft: dp(56) }} />
+      <FlatList
+        horizontal
+        data={data}
+        keyExtractor={keyOf}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: dp(56), paddingVertical: dp(16) }}
+        ItemSeparatorComponent={() => <View style={{ width: dp(gap) }} />}
+        renderItem={({ item, index }: { item: T; index: number }) => <>{render(item, index)}</>}
       />
     </View>
   );

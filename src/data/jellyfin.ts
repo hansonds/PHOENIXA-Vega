@@ -1,6 +1,7 @@
 /* Jellyfin server API, ported 1:1 from Android PHOENIXA (data/JellyfinApi.kt). */
 import { prefs } from './prefs';
-import { Item, Library, Person, parseItem } from './models';
+import { Item, Library, MediaStreamInfo, Person, PlaySelection, parseItem, parseStream } from './models';
+import { deviceProfile } from '../player/deviceProfile';
 
 export class ApiException extends Error {
   code: number;
@@ -180,6 +181,49 @@ export const api = {
     return api.image(p.id, 'Primary', p.imageTag, w);
   },
 
+  async person(id: string): Promise<Item> {
+    return parseItem(await api.getObj(`/Users/${api.userId}/Items/${id}?Fields=Overview,ProductionLocations`));
+  },
+
+  /**
+   * Person details with biography. Tries the item endpoint, then the /Persons endpoint, and once more
+   * after a short wait (the server may fetch the biography on demand the first time).
+   */
+  async personWithBio(id: string, name: string): Promise<Item | null> {
+    const byName = async (): Promise<Item | null> => {
+      try {
+        return parseItem(await api.getObj(`/Persons/${enc(name)}?userId=${api.userId}&Fields=Overview,ProductionLocations`));
+      } catch {
+        return null;
+      }
+    };
+    const byId = async (): Promise<Item | null> => {
+      try {
+        return await api.person(id);
+      } catch {
+        return null;
+      }
+    };
+    let best = await byId();
+    if (!best?.overview.trim()) {
+      const b = await byName();
+      if (b && (!best || b.overview.trim())) best = b;
+    }
+    if (!best?.overview.trim()) {
+      await new Promise<void>(r => setTimeout(() => r(), 1500));
+      const again = (await byId()) ?? (await byName());
+      if (again && (!best || again.overview.trim())) best = again;
+    }
+    return best;
+  },
+
+  /** Movies and shows a person appears in */
+  filmography: (personId: string) =>
+    api.getItems(
+      `/Users/${api.userId}/Items?PersonIds=${personId}&Recursive=true&IncludeItemTypes=Movie,Series` +
+        `&SortBy=ProductionYear,PremiereDate,SortName&SortOrder=Descending&Fields=${FIELDS}${IMG}`,
+    ),
+
   userImage(): string {
     return `${api.server}/Users/${api.userId}/Images/Primary?maxWidth=120&quality=90`;
   },
@@ -260,6 +304,119 @@ export const api = {
 
   async setPlayed(id: string, played: boolean): Promise<void> {
     await api.call(played ? 'POST' : 'DELETE', `/Users/${api.userId}/PlayedItems/${id}`);
+  },
+};
+
+export interface ExternalSub {
+  url: string;
+  language: string | null;
+  title: string;
+  index: number;
+}
+
+export interface PlaybackSource {
+  url: string;
+  mediaSourceId: string;
+  playSessionId: string | null;
+  isTranscoding: boolean;
+  /** Text subtitles (inside the file or next to it), fetched from the server as WebVTT */
+  subs: ExternalSub[];
+  /** Jellyfin indexes of audio tracks inside the file, in file order */
+  embeddedAudio: number[];
+  /** All streams of the chosen version, with language/codec info */
+  streams: MediaStreamInfo[];
+  defaultAudioIndex: number | null;
+  defaultSubtitleIndex: number | null;
+  container: string;
+}
+
+const TEXT_SUB = new Set(['srt', 'subrip', 'ass', 'ssa', 'vtt', 'webvtt', 'mov_text', 'text', 'smi', 'sami', 'ttml']);
+
+export const playback = {
+  async info(itemId: string, startTicks: number, sel: PlaySelection | null): Promise<PlaybackSource> {
+    const maxBitrate = prefs.maxBitrateMbps > 0 ? prefs.maxBitrateMbps * 1000000 : 200000000;
+    // No transcoding: always the original file (same as "Direct play only" on Android)
+    const body: Record<string, unknown> = {
+      UserId: api.userId,
+      StartTimeTicks: startTicks,
+      MaxStreamingBitrate: maxBitrate,
+      EnableDirectPlay: true,
+      EnableDirectStream: true,
+      EnableTranscoding: false,
+      AutoOpenLiveStream: true,
+      DeviceProfile: deviceProfile(),
+    };
+    if (sel?.mediaSourceId) body.MediaSourceId = sel.mediaSourceId;
+    if (sel?.audioIndex !== null && sel?.audioIndex !== undefined) body.AudioStreamIndex = sel.audioIndex;
+    if (sel?.subtitleIndex !== null && sel?.subtitleIndex !== undefined && sel.subtitleIndex >= 0) body.SubtitleStreamIndex = sel.subtitleIndex;
+
+    const o = JSON.parse(await api.call('POST', `/Items/${itemId}/PlaybackInfo?UserId=${api.userId}`, body));
+    const playSessionId: string | null = o.PlaySessionId ?? null;
+    const sources: any[] = o.MediaSources ?? [];
+    const ms = sources.find(x => x?.Id === sel?.mediaSourceId) ?? sources[0];
+    if (!ms) throw new ApiException('No playable media');
+    const msId: string = ms.Id;
+    const container: string = ms.Container ?? '';
+    const tok = api.token;
+
+    // Direct play: the server's own stream address (Torvia/TorBox items answer it with a redirect to TorBox)
+    const url =
+      `${api.server}/Videos/${itemId}/stream?static=true&MediaSourceId=${msId}&ApiKey=${tok}&api_key=${tok}` +
+      (playSessionId ? `&PlaySessionId=${playSessionId}` : '') +
+      (container ? `&Container=${container}` : '');
+
+    const raw: any[] = ms.MediaStreams ?? [];
+    const streams = raw.filter(Boolean).map(parseStream);
+    const subs: ExternalSub[] = [];
+    for (const s of raw) {
+      if (!s || s.Type !== 'Subtitle') continue;
+      const codec = String(s.Codec ?? '').toLowerCase();
+      if (!s.IsTextSubtitleStream && !TEXT_SUB.has(codec)) continue; // picture subtitles (PGS, DVD) can't be converted
+      const idx = s.Index ?? 0;
+      subs.push({
+        url: `${api.server}/Videos/${itemId}/${msId}/Subtitles/${idx}/0/Stream.vtt?ApiKey=${tok}&api_key=${tok}`,
+        language: s.Language ?? null,
+        title: s.DisplayTitle ?? `Subtitle ${idx}`,
+        index: idx,
+      });
+    }
+    const embeddedAudio = raw.filter(s => s && !s.IsExternal && s.Type === 'Audio').map(s => s.Index ?? 0);
+    return {
+      url,
+      mediaSourceId: msId,
+      playSessionId,
+      isTranscoding: false,
+      subs,
+      embeddedAudio,
+      streams,
+      defaultAudioIndex: typeof ms.DefaultAudioStreamIndex === 'number' ? ms.DefaultAudioStreamIndex : null,
+      defaultSubtitleIndex: typeof ms.DefaultSubtitleStreamIndex === 'number' ? ms.DefaultSubtitleStreamIndex : null,
+      container,
+    };
+  },
+
+  body(itemId: string, src: PlaybackSource, ticks: number, paused: boolean, audioIndex: number | null, subIndex: number | null) {
+    return {
+      ItemId: itemId,
+      MediaSourceId: src.mediaSourceId,
+      PlaySessionId: src.playSessionId,
+      PositionTicks: Math.max(0, Math.round(ticks)),
+      IsPaused: paused,
+      CanSeek: true,
+      PlayMethod: 'DirectPlay',
+      AudioStreamIndex: audioIndex,
+      SubtitleStreamIndex: subIndex ?? -1,
+    };
+  },
+
+  async start(b: object) {
+    try { await api.call('POST', '/Sessions/Playing', b); } catch { /* ignore */ }
+  },
+  async progress(b: object) {
+    try { await api.call('POST', '/Sessions/Playing/Progress', b); } catch { /* ignore */ }
+  },
+  async stopped(b: object) {
+    try { await api.call('POST', '/Sessions/Playing/Stopped', b); } catch { /* ignore */ }
   },
 };
 

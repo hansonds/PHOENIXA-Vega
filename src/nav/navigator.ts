@@ -13,6 +13,8 @@ export type Screen =
   | { kind: 'Detail'; itemId: string }
   | { kind: 'Person'; id: string; name: string }
   | { kind: 'Torvia' }
+  | { kind: 'TorviaTitle'; type: string; tmdbId: number; name: string }
+  | { kind: 'About' }
   | { kind: 'Player'; itemId: string; startTicks: number };
 
 export interface StackEntry {
