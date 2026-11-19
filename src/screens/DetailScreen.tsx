@@ -350,10 +350,7 @@ export function DetailScreen({ itemId, active }: { itemId: string; active: boole
   }
 }
 
-const SelectorChip = React.forwardRef<any, { caption: string; value: string; onPress: () => void }>(function SelectorChip(
-  { caption, value, onPress },
-  ref,
-) {
+function SelectorChip({ caption, value, onPress, ref }: { caption: string; value: string; onPress: () => void } & { ref?: React.Ref<any> }) {
   const P = usePalette();
   return (
     <FocusSurface ref={ref} onPress={onPress} radius={14} focusedScale={1.04} borderWidth={0} glow={false}>
@@ -376,7 +373,7 @@ const SelectorChip = React.forwardRef<any, { caption: string; value: string; onP
       )}
     </FocusSurface>
   );
-});
+}
 
 function ActionRow({ item, nextUp, playRef, onPlay, onChanged, onFocusRow }: {
   item: Item;

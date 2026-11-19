@@ -20,6 +20,28 @@ import { Fixed, NovaType, accentH, alpha, usePalette } from '../theme/theme';
 import { isDts, isUnplayableAudio } from './deviceProfile';
 import { pendingSelection } from './launcher';
 
+/** Settings → "Test the player": a short H.264 / AAC MP4 from Amazon's Vega sample app */
+export const PLAYER_TEST_ID = '__player_test__';
+const TEST_URL = 'https://edge-vod-media.cdn01.net/encoded/0000169/0169306/video_1880k/A57CBB0FF.mp4';
+
+function testItem(): Item {
+  return {
+    id: PLAYER_TEST_ID, name: 'Player test (H.264 / AAC)', type: 'Movie', overview: 'A short sample video that every Vega device can play.',
+    year: null, communityRating: null, criticRating: null, officialRating: null, runTimeTicks: 0, genres: [], primaryTag: null,
+    backdropTag: null, backdropItemId: null, logoTag: null, logoItemId: null, thumbTag: null, thumbItemId: null, seriesId: null,
+    seriesName: null, seriesPrimaryTag: null, seasonId: null, indexNumber: null, parentIndexNumber: null, childCount: null,
+    playbackPositionTicks: 0, playedPercentage: null, played: false, isFavorite: false, unplayedCount: null, collectionType: null,
+    people: [], taglines: [], studios: [], streams: [], premiereDate: null, endDate: null, locations: [], mediaSources: [],
+  };
+}
+
+function testSource(): PlaybackSource {
+  return {
+    url: TEST_URL, mediaSourceId: 'test', playSessionId: null, isTranscoding: false, subs: [], embeddedAudio: [], streams: [],
+    defaultAudioIndex: null, defaultSubtitleIndex: null, container: 'mp4',
+  };
+}
+
 interface Current {
   itemId: string;
   startTicks: number;
@@ -110,7 +132,7 @@ function PlayerSession({
   const report = useCallback((kind: 'start' | 'progress' | 'stopped', paused = false) => {
     const s = srcRef.current;
     const v = video.current;
-    if (!s) return;
+    if (!s || cur.itemId === PLAYER_TEST_ID) return;
     const ticks = (v ? v.currentTime : 0) * 10000000;
     const b = playback.body(cur.itemId, s, ticks, paused, audioRef.current, subRef.current);
     if (kind === 'start') playback.start(b);
@@ -124,8 +146,9 @@ function PlayerSession({
     (async () => {
       try {
         // Ask the server for the item and the stream at the same time (faster start)
-        const itemP = api.item(cur.itemId);
-        const s = await playback.info(cur.itemId, cur.startTicks, cur.sel);
+        const test = cur.itemId === PLAYER_TEST_ID;
+        const itemP = test ? Promise.resolve(testItem()) : api.item(cur.itemId);
+        const s = test ? testSource() : await playback.info(cur.itemId, cur.startTicks, cur.sel);
         if (disposed.current) return;
         srcRef.current = s;
         setSrc(s);
@@ -261,7 +284,15 @@ function PlayerSession({
     const what = stream && isDts(stream.codec)
       ? 'This TV needs a soundbar or receiver that supports DTS to play this audio.'
       : "The TV couldn't decode this file.";
-    setError(`${what}${code}`);
+    // Details that help find the reason (what the file contains and what the player said)
+    const vid = s?.streams.find(x => x.type === 'Video');
+    const fileInfo = [
+      s?.container ? s.container.toUpperCase() : null,
+      vid ? [vid.codec.toUpperCase(), vid.height ? `${vid.height}p` : null, vid.videoRangeType || null].filter(Boolean).join(' ') : null,
+      stream ? `${stream.codec.toUpperCase()} ${stream.channels ? stream.channels + 'ch' : ''}`.trim() : null,
+    ].filter(Boolean).join(' · ');
+    const native: string = (v as any)?.mediaControlStateUtil?.mError?.message_ ?? err?.message ?? '';
+    setError(`${what}${code}${fileInfo ? `\nFile: ${fileInfo}` : ''}${native ? `\nPlayer: ${String(native).slice(0, 200)}` : ''}`);
   };
 
   // ---------- surface: attach, jump to the resume point, play ----------
@@ -840,7 +871,7 @@ function SeekBar({ seekRef, position, duration, scrubbing, onFocus, onPress }: {
   );
 }
 
-const PlayButton = React.forwardRef<any, { playing: boolean; onPress: () => void }>(function PlayButton({ playing, onPress }, ref) {
+function PlayButton({ playing, onPress, ref }: { playing: boolean; onPress: () => void } & { ref?: React.Ref<any> }) {
   const P = usePalette();
   return (
     <FocusSurface ref={ref} onPress={onPress} radius={38} focusedScale={1.1} borderWidth={0}>
@@ -862,7 +893,7 @@ const PlayButton = React.forwardRef<any, { playing: boolean; onPress: () => void
       )}
     </FocusSurface>
   );
-});
+}
 
 function RoundIcon({ icon, size = 46, active = false, onPress }: { icon: IconName; size?: number; active?: boolean; onPress: () => void }) {
   const P = usePalette();

@@ -1,4 +1,4 @@
-import React, { forwardRef, ReactNode, useEffect, useRef, useState } from 'react';
+import React, { ReactNode, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleProp, View, ViewStyle } from 'react-native';
 import { Pressable } from '@amazon-devices/react-native-kepler';
 import { dp } from '../theme/scale';
@@ -30,13 +30,9 @@ const ease = Easing.bezier(0.4, 0, 0.2, 1); // FastOutSlowIn
  * A remote-friendly focusable surface: scales up, glows and gets an aurora gradient border
  * when focused. OK / Select triggers onPress. Same as FocusSurface in Android PHOENIXA.
  */
-export const FocusSurface = forwardRef<any, FocusSurfaceProps>(function FocusSurface(
-  {
+export function FocusSurface({
     onPress, style, radius = 14, focusedScale = 1.05, borderWidth = 2.5, glow = true,
-    hasTVPreferredFocus, onFocused, onBlurred, nextFocusUp, nextFocusDown, nextFocusLeft, nextFocusRight, children,
-  },
-  ref,
-) {
+    hasTVPreferredFocus, onFocused, onBlurred, nextFocusUp, nextFocusDown, nextFocusLeft, nextFocusRight, children, ref }: FocusSurfaceProps & { ref?: React.Ref<any> }) {
   const P = usePalette();
   const [focused, setFocused] = useState(false);
   const scale = useRef(new Animated.Value(1)).current;
@@ -94,4 +90,4 @@ export const FocusSurface = forwardRef<any, FocusSurfaceProps>(function FocusSur
       </Animated.View>
     </Pressable>
   );
-});
+}

@@ -1,4 +1,4 @@
-import React, { forwardRef, ReactNode, useEffect, useRef } from 'react';
+import React, { ReactNode, useEffect, useRef } from 'react';
 import { Animated, Easing, FlatList, StyleProp, Text, View, ViewStyle } from 'react-native';
 import {
   Item, episodeLabel, isEpisode, isSeries, progress as itemProgress, qualityBadges, runtimeMinutes,
@@ -32,7 +32,7 @@ export function clockText(d: Date): string {
 
 // ---------- Buttons & chips ----------
 
-export const NovaButton = forwardRef<any, {
+export function NovaButton({ text, icon, primary = false, style, hasTVPreferredFocus, onFocused, nextFocusLeft, nextFocusRight, onPress, ref }: {
   text: string;
   icon?: IconName;
   primary?: boolean;
@@ -42,7 +42,7 @@ export const NovaButton = forwardRef<any, {
   nextFocusLeft?: number;
   nextFocusRight?: number;
   onPress: () => void;
-}>(function NovaButton({ text, icon, primary = false, style, hasTVPreferredFocus, onFocused, nextFocusLeft, nextFocusRight, onPress }, ref) {
+} & { ref?: React.Ref<any> }) {
   const P = usePalette();
   return (
     <FocusSurface
@@ -85,7 +85,7 @@ export const NovaButton = forwardRef<any, {
       }}
     </FocusSurface>
   );
-});
+}
 
 export function GlassChip({ text, accent, style }: { text: string; accent?: string; style?: StyleProp<ViewStyle> }) {
   const P = usePalette();
@@ -176,7 +176,7 @@ export function ShimmerBox({ style }: { style?: StyleProp<ViewStyle> }) {
 
 const fill = { position: 'absolute' as const, left: 0, top: 0, right: 0, bottom: 0 };
 
-export const PosterCard = forwardRef<any, {
+export function PosterCard({ item, onPress, width = UiScale.posterWidth, showTitle = false, hasTVPreferredFocus, onFocused, nextFocusUp, ref }: {
   item: Item;
   onPress: () => void;
   width?: number;
@@ -184,7 +184,7 @@ export const PosterCard = forwardRef<any, {
   hasTVPreferredFocus?: boolean;
   onFocused?: () => void;
   nextFocusUp?: number;
-}>(function PosterCard({ item, onPress, width = UiScale.posterWidth, showTitle = false, hasTVPreferredFocus, onFocused, nextFocusUp }, ref) {
+} & { ref?: React.Ref<any> }) {
   const P = usePalette();
   const poster = api.poster(item, 360);
   const prog = itemProgress(item);
@@ -238,9 +238,9 @@ export const PosterCard = forwardRef<any, {
       ) : null}
     </View>
   );
-});
+}
 
-export const LandscapeCard = forwardRef<any, {
+export function LandscapeCard({ item, onPress, width = UiScale.landscapeWidth, subtitle, hasTVPreferredFocus, onFocused, nextFocusUp, ref }: {
   item: Item;
   onPress: () => void;
   width?: number;
@@ -248,7 +248,7 @@ export const LandscapeCard = forwardRef<any, {
   hasTVPreferredFocus?: boolean;
   onFocused?: () => void;
   nextFocusUp?: number;
-}>(function LandscapeCard({ item, onPress, width = UiScale.landscapeWidth, subtitle, hasTVPreferredFocus, onFocused, nextFocusUp }, ref) {
+} & { ref?: React.Ref<any> }) {
   const P = usePalette();
   const prog = itemProgress(item);
   const sub =
@@ -283,7 +283,7 @@ export const LandscapeCard = forwardRef<any, {
       )}
     </FocusSurface>
   );
-});
+}
 
 export function SectionTitle({ text, style }: { text: string; style?: StyleProp<ViewStyle> }) {
   const P = usePalette();

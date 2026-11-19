@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Image, ScrollView, Text, View } from 'react-native';
 import { prefs } from '../data/prefs';
 import { nav } from '../nav/navigator';
+import { PLAYER_TEST_ID } from '../player/PlayerScreen';
 import { FocusSurface } from '../components/FocusSurface';
 import { OptionSheet } from '../components/OptionSheet';
 import { requestFocus } from '../components/focus';
@@ -87,6 +88,12 @@ export function SettingsScreen({ onSignOut, active }: { onSignOut: () => void; a
               prefs.heroAutoRotate = !heroRotate;
             }}
           />
+          <SettingRow
+            title="Test the player"
+            sub="Plays a short sample video (H.264 / AAC) to check that video works on this device"
+            value="›"
+            onPress={() => nav.push({ kind: 'Player', itemId: PLAYER_TEST_ID, startTicks: 0 })}
+          />
           <SettingRow title="About PHOENIXA" sub="Version, credits and phoenicx.org" value="›" onPress={() => nav.push({ kind: 'About' })} />
 
           <View style={{ height: dp(8) }} />
@@ -156,10 +163,7 @@ function InfoCard({ title, value, sub }: { title: string; value: string; sub: st
   );
 }
 
-const SettingRow = React.forwardRef<any, { title: string; sub: string; value: string; onPress: () => void }>(function SettingRow(
-  { title, sub, value, onPress },
-  ref,
-) {
+function SettingRow({ title, sub, value, onPress, ref }: { title: string; sub: string; value: string; onPress: () => void } & { ref?: React.Ref<any> }) {
   const P = usePalette();
   return (
     <FocusSurface ref={ref} onPress={onPress} radius={18} focusedScale={1.02}>
@@ -179,7 +183,7 @@ const SettingRow = React.forwardRef<any, { title: string; sub: string; value: st
       )}
     </FocusSurface>
   );
-});
+}
 
 const LOGO = require('../../assets/image/logo_stacked.png');
 

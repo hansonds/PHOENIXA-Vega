@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { StyleProp, Text, TextInput, View, ViewStyle } from 'react-native';
 import { Pressable } from '@amazon-devices/react-native-kepler';
 import { dp } from '../theme/scale';
@@ -17,7 +17,8 @@ export interface NovaTextFieldHandle {
  * TV text field: moving the highlight onto it does NOT pop up the keyboard.
  * Press OK on it to start typing; Done/Next or moving away ends editing.
  */
-export const NovaTextField = forwardRef<NovaTextFieldHandle, {
+export function NovaTextField({ value, onChangeText, label, placeholder = '', password = false, icon, returnKeyType = 'next', keyboardType = 'default',
+    hasTVPreferredFocus, onSubmit, style, ref }: {
   value: string;
   onChangeText: (v: string) => void;
   label: string;
@@ -30,11 +31,7 @@ export const NovaTextField = forwardRef<NovaTextFieldHandle, {
   /** Called after Done / Search / Go on the keyboard, or Next */
   onSubmit?: () => void;
   style?: StyleProp<ViewStyle>;
-}>(function NovaTextField(
-  { value, onChangeText, label, placeholder = '', password = false, icon, returnKeyType = 'next', keyboardType = 'default',
-    hasTVPreferredFocus, onSubmit, style },
-  ref,
-) {
+} & { ref?: React.Ref<NovaTextFieldHandle> }) {
   const P = usePalette();
   const displayRef = useRef<any>(null);
   const inputRef = useRef<TextInput>(null);
@@ -138,4 +135,4 @@ export const NovaTextField = forwardRef<NovaTextFieldHandle, {
       )}
     </View>
   );
-});
+}

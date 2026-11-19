@@ -401,10 +401,7 @@ export function HomeScreen({ active }: { active: boolean }) {
   );
 }
 
-const FavButton = React.forwardRef<any, { item: Item; onFocused: () => void; nextFocusRight?: number }>(function FavButton(
-  { item, onFocused, nextFocusRight },
-  ref,
-) {
+function FavButton({ item, onFocused, nextFocusRight, ref }: { item: Item; onFocused: () => void; nextFocusRight?: number } & { ref?: React.Ref<any> }) {
   const [fav, setFav] = useState(item.isFavorite);
   useEffect(() => setFav(item.isFavorite), [item.id, item.isFavorite]);
   return (
@@ -422,7 +419,7 @@ const FavButton = React.forwardRef<any, { item: Item; onFocused: () => void; nex
       }}
     />
   );
-});
+}
 
 function HeroInfo({ item }: { item: Item }) {
   const P = usePalette();
