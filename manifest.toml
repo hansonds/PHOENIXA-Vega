@@ -1,0 +1,68 @@
+schema-version = 1
+
+[package]
+title = "PHOENIXA"
+version = "1.0.0"
+id = "org.phoenicx.nova"
+icon = "@image/icon.png"
+
+[os.version]
+min = "2.0"
+target = "2.0"
+
+[needs]
+[[needs.module]]
+id = "/com.amazon.kepler.keplerscript_4@IKeplerScript_0"
+
+[[needs.module]]
+id = "/com.amazon.kepler.async_storage__async_storage_2@IAsyncStorage__AsyncStorage_1"
+
+[components]
+[[components.interactive]]
+id = "org.phoenicx.nova.main"
+runtime-module = "/com.amazon.kepler.runtime.react_native_kepler_4@IReactNativeKepler_0"
+launch-type = "singleton"
+categories = ["com.amazon.category.main", "com.amazon.category.kepler.media"]
+
+[processes]
+[[processes.group]]
+component-ids = ["org.phoenicx.nova.main"]
+
+[wants]
+# On-screen keyboard (server address, username, password, search)
+[[wants.service]]
+id = "com.amazon.inputmethod.service"
+
+# Remote control buttons
+[[wants.service]]
+id = "com.amazon.inputd.service"
+
+# Video player (W3C media)
+[[wants.service]]
+id = "com.amazon.media.server"
+
+[[wants.service]]
+id = "com.amazon.mediametrics.service"
+
+[[wants.service]]
+id = "com.amazon.mediabuffer.service"
+
+[[wants.service]]
+id = "com.amazon.mediatransform.service"
+
+[[wants.service]]
+id = "com.amazon.media.playersession.service"
+
+# Audio output and volume
+[[wants.service]]
+id = "com.amazon.audio.stream"
+
+[[wants.service]]
+id = "com.amazon.audio.control"
+
+[[wants.service]]
+id = "com.amazon.gipc.uuid.*"
+
+[offers]
+[[offers.service]]
+id = "com.amazon.gipc.uuid.*"
