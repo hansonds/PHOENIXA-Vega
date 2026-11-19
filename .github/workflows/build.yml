@@ -48,7 +48,11 @@ jobs:
         shell: bash
         run: |
           source "$HOME/vega/env"
-          npm run build:release
+          # Version from package.json; build number goes up by one with every GitHub build
+          # (the Appstore needs a higher build number for every update)
+          VERSION=$(node -p "require('./package.json').version")
+          npx react-native build-vega --build-type Release --build-version "$VERSION" --build-number "${{ github.run_number }}"
+          echo "PHOENIXA_VERSION=$VERSION" >> "$GITHUB_ENV"
 
       - name: Collect packages
         shell: bash
@@ -77,14 +81,14 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: PHOENIXA for Vega OS (latest build)
+          name: PHOENIXA for Vega OS ${{ env.PHOENIXA_VERSION }} (build ${{ github.run_number }})
           prerelease: true
           files: out/*.vpkg
           body: |
             Latest automatic build of PHOENIXA for Fire TV devices with Vega OS.
 
             - **PHOENIXA_x86_64.vpkg**: Vega Virtual Device on a Windows/Linux PC
-            - **PHOENIXA_armv7.vpkg**: Fire TV Stick with Vega OS
+            - **PHOENIXA_armv7.vpkg**: Fire TV Stick with Vega OS — **upload this one to the Amazon Appstore**
             - **PHOENIXA_aarch64.vpkg**: Vega Virtual Device on an Apple M-series Mac
 
             Made by Hanson · https://phoenicx.org

@@ -70,6 +70,10 @@ vega virtual-device start
 vega run-app "$(ls build/x86_64-release/*.vpkg)" org.phoenicx.nova.main -d VirtualDevice
 ```
 
+## 🛒 Amazon Appstore
+
+Submission files and instructions are in [STORE.md](STORE.md); store pictures are in [`store/`](store). Privacy policy: [PRIVACY.md](PRIVACY.md).
+
 ## 🎮 Remote controls
 
 | Where | Button | Action |
