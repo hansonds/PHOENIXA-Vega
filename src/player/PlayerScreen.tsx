@@ -42,12 +42,38 @@ function testSource(): PlaybackSource {
   };
 }
 
+/** Asks the server for the first bytes of the file the same way the player does, and says what happened. */
+async function probe(url: string): Promise<string> {
+  const ctrl = new AbortController();
+  const t0 = Date.now();
+  const timer = setTimeout(() => ctrl.abort(), 20000);
+  try {
+    const r = await fetch(url, { headers: { Range: 'bytes=0-65535' }, signal: ctrl.signal });
+    const ms = Date.now() - t0;
+    let host = '';
+    try {
+      host = (r.url || url).split('/')[2] ?? '';
+    } catch {
+      host = '';
+    }
+    const len = r.headers.get('content-length') ?? '?';
+    const type = r.headers.get('content-type') ?? '?';
+    return `HTTP ${r.status} in ${(ms / 1000).toFixed(1)} s from ${host} (${type}, ${len} bytes)`;
+  } catch (e: any) {
+    return e?.name === 'AbortError' ? 'no answer within 20 s (very slow or blocked connection)' : `failed (${e?.message ?? 'network error'})`;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 interface Current {
   itemId: string;
   startTicks: number;
   sel: PlaySelection | null;
   /** Audio streams already tried and failed (DTS without passthrough) */
   failedAudio: number[];
+  /** Automatic retries after a network error */
+  retries: number;
   n: number;
 }
 
@@ -56,15 +82,15 @@ interface Current {
  * with the same controls as Android PHOENIXA.
  */
 export function PlayerScreen({ itemId, startTicks, active }: { itemId: string; startTicks: number; active: boolean }) {
-  const [cur, setCur] = useState<Current>(() => ({ itemId, startTicks, sel: pendingSelection, failedAudio: [], n: 0 }));
+  const [cur, setCur] = useState<Current>(() => ({ itemId, startTicks, sel: pendingSelection, failedAudio: [], retries: 0, n: 0 }));
   return (
     <View style={{ flex: 1, backgroundColor: '#000000' }}>
       <PlayerSession
         key={cur.n}
         cur={cur}
         active={active}
-        onNext={next => setCur(c => ({ itemId: next.id, startTicks: 0, sel: null, failedAudio: [], n: c.n + 1 }))}
-        onRestart={(ticks, sel, failedAudio) => setCur(c => ({ itemId: c.itemId, startTicks: ticks, sel, failedAudio, n: c.n + 1 }))}
+        onNext={next => setCur(c => ({ itemId: next.id, startTicks: 0, sel: null, failedAudio: [], retries: 0, n: c.n + 1 }))}
+        onRestart={(ticks, sel, failedAudio, retries) => setCur(c => ({ itemId: c.itemId, startTicks: ticks, sel, failedAudio, retries, n: c.n + 1 }))}
         onExit={() => nav.back()}
       />
     </View>
@@ -82,7 +108,7 @@ function PlayerSession({
   cur: Current;
   active: boolean;
   onNext: (next: Item) => void;
-  onRestart: (ticks: number, sel: PlaySelection, failedAudio: number[]) => void;
+  onRestart: (ticks: number, sel: PlaySelection, failedAudio: number[], retries: number) => void;
   onExit: () => void;
 }) {
   const P = usePalette();
@@ -275,15 +301,13 @@ function PlayerSession({
         const alt = others.find(x => Lang.same(x.language, stream.language)) ?? others[0];
         onRestart(Math.max(pos, cur.startTicks), { mediaSourceId: s.mediaSourceId, audioIndex: alt.index, subtitleIndex: subRef.current }, [
           ...cur.failedAudio, stream.index,
-        ]);
+        ], cur.retries);
         return;
       }
     }
     const err: any = (v as any)?.error;
+    const native: string = String((v as any)?.mediaControlStateUtil?.mError?.message_ ?? err?.message ?? '');
     const code = err?.code ? ` (code ${err.code})` : '';
-    const what = stream && isDts(stream.codec)
-      ? 'This TV needs a soundbar or receiver that supports DTS to play this audio.'
-      : "The TV couldn't decode this file.";
     // Details that help find the reason (what the file contains and what the player said)
     const vid = s?.streams.find(x => x.type === 'Video');
     const fileInfo = [
@@ -291,8 +315,31 @@ function PlayerSession({
       vid ? [vid.codec.toUpperCase(), vid.height ? `${vid.height}p` : null, vid.videoRangeType || null].filter(Boolean).join(' ') : null,
       stream ? `${stream.codec.toUpperCase()} ${stream.channels ? stream.channels + 'ch' : ''}`.trim() : null,
     ].filter(Boolean).join(' · ');
-    const native: string = (v as any)?.mediaControlStateUtil?.mError?.message_ ?? err?.message ?? '';
-    setError(`${what}${code}${fileInfo ? `\nFile: ${fileInfo}` : ''}${native ? `\nPlayer: ${String(native).slice(0, 200)}` : ''}`);
+    const tail = `${fileInfo ? `\nFile: ${fileInfo}` : ''}${native ? `\nPlayer: ${native.slice(0, 200)}` : ''}`;
+
+    // The download from the server broke (not the decoding): try again from the same spot, twice
+    const network = /httpsrc|soup|network|connection|timed out|resolve/i.test(native) || err?.code === 2;
+    if (network && s && cur.retries < 2 && cur.itemId !== PLAYER_TEST_ID) {
+      const pos = (v?.currentTime ?? 0) * 10000000;
+      setBuffering(true);
+      setTimeout(() => {
+        if (disposed.current) return;
+        onRestart(Math.max(pos, cur.startTicks), { mediaSourceId: s.mediaSourceId, audioIndex: audioRef.current, subtitleIndex: subRef.current },
+          cur.failedAudio, cur.retries + 1);
+      }, 1500);
+      return;
+    }
+    if (network && s) {
+      setError(`Couldn't stream this file from your server${code}.\nChecking the connection…${tail}`);
+      probe(s.url).then(r => {
+        if (!disposed.current) setError(`Couldn't stream this file from your server${code}.\nServer check: ${r}${tail}`);
+      });
+      return;
+    }
+    const what = stream && isDts(stream.codec)
+      ? 'This TV needs a soundbar or receiver that supports DTS to play this audio.'
+      : "The TV couldn't decode this file.";
+    setError(`${what}${code}${tail}`);
   };
 
   // ---------- surface: attach, jump to the resume point, play ----------
