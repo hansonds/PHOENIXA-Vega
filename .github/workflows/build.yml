@@ -1,0 +1,90 @@
+name: Build Vega app
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build PHOENIXA .vpkg
+    runs-on: ubuntu-24.04
+    env:
+      CI: 'true'
+      NONINTERACTIVE: 'true'
+      SKIP_VVD_INSTALL: 'true'
+      VEGA_SDK_VERSION: '2.0.15159'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      # https://developer.amazon.com/docs/vega/2.0/continuous-integration
+      - name: Install Vega SDK
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y jq lz4
+          curl --fail --silent --show-error --location \
+            https://sdk-installer.vega.labcollab.net/get_vvm.sh \
+            --output "$RUNNER_TEMP/install-vega.sh"
+          bash "$RUNNER_TEMP/install-vega.sh"
+          source "$HOME/vega/env"
+          vega --version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check TypeScript
+        run: npx tsc --noEmit
+
+      - name: Build release packages
+        shell: bash
+        run: |
+          source "$HOME/vega/env"
+          npm run build:release
+
+      - name: Collect packages
+        shell: bash
+        run: |
+          mkdir -p out
+          for arch in x86_64 aarch64 armv7; do
+            f=$(ls build/${arch}-release/*.vpkg 2>/dev/null | head -1)
+            if [ -n "$f" ]; then cp "$f" "out/PHOENIXA_${arch}.vpkg"; fi
+          done
+          ls -la out
+          test -n "$(ls out)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PHOENIXA-vega
+          path: out/*.vpkg
+          if-no-files-found: error
+
+      # ---------- Public download: Releases → latest ----------
+      - name: Move the 'latest' tag to this build
+        run: |
+          git tag -f latest
+          git push -f origin latest
+
+      - name: Publish latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: PHOENIXA for Vega OS (latest build)
+          prerelease: true
+          files: out/*.vpkg
+          body: |
+            Latest automatic build of PHOENIXA for Fire TV devices with Vega OS.
+
+            - **PHOENIXA_x86_64.vpkg**: Vega Virtual Device on a Windows/Linux PC
+            - **PHOENIXA_armv7.vpkg**: Fire TV Stick with Vega OS
+            - **PHOENIXA_aarch64.vpkg**: Vega Virtual Device on an Apple M-series Mac
+
+            Made by Hanson · https://phoenicx.org

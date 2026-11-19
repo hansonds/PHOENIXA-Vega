@@ -27,7 +27,22 @@ PHOENIXA is a native TV app for your Jellyfin server, with its own elegant dark 
 | Details, seasons and episodes, actor pages, library grids, search, favorites, full settings, About | Coming |
 | Search & Add (Torvia) | Coming |
 
-## 🛠 Build and run
+## 📥 Download
+
+Every push to `main` is built automatically by GitHub Actions. Get the newest `.vpkg` files from **[Releases → latest](https://github.com/hansonds/PHOENIXA-Vega/releases/tag/latest)**:
+
+- `PHOENIXA_x86_64.vpkg`: Vega Virtual Device on a Windows/Linux PC
+- `PHOENIXA_armv7.vpkg`: Fire TV Stick with Vega OS
+- `PHOENIXA_aarch64.vpkg`: Vega Virtual Device on an Apple M-series Mac
+
+Run a downloaded package on the virtual device:
+
+```bash
+vega virtual-device start
+vega run-app PHOENIXA_x86_64.vpkg org.phoenicx.nova.main -d VirtualDevice
+```
+
+## 🛠 Build it yourself
 
 You need the **Vega SDK 2.0** (with the Vega CLI) and **Node.js 22.14 or newer**.
 
