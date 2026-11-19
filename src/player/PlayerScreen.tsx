@@ -42,6 +42,21 @@ function testSource(): PlaybackSource {
   };
 }
 
+/** The final address of a stream after the server's redirects (the original address if it can't tell). */
+async function resolveUrl(url: string): Promise<string> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const r = await fetch(url, { headers: { Range: 'bytes=0-0' }, signal: ctrl.signal });
+    const final = r.url;
+    return final && /^https?:\/\//.test(final) ? final : url;
+  } catch {
+    return url;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Asks the server for the first bytes of the file the same way the player does, and says what happened. */
 async function probe(url: string): Promise<string> {
   const ctrl = new AbortController();
@@ -242,7 +257,13 @@ function PlayerSession({
             // skip this subtitle
           }
         });
-        v.src = s.url;
+        // Follow the server's redirect ourselves (TorBox/Torvia items answer with a redirect to
+        // TorBox's CDN), so the player gets the real file address straight away.
+        const real = await resolveUrl(s.url);
+        if (disposed.current) return;
+        const headers = { 'User-Agent': 'PHOENIXA/1.0 (Fire TV; Vega OS)' };
+        if (typeof (v as any).setSrcWithCustomHeaders === 'function') (v as any).setSrcWithCustomHeaders(real, headers);
+        else v.src = real;
         v.pause();
         v.load();
       } catch (e: any) {
